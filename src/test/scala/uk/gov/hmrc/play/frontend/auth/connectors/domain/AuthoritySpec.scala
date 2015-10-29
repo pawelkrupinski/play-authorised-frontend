@@ -30,7 +30,7 @@ class AuthoritySpec extends UnitSpec with WithFakeApplication {
         Accounts(paye = Some(PayeAccount("/paye/AA000002B", Nino("AA000002B"))), iht = Some(IhtAccount("/iht/AA000002B", Nino("AA000002B")))),
         None,
         None,
-        LevelOfAssurance.LOA_2)
+        ConfidenceLevel.L500)
 
       val jsonString = Json.toJson(authority).toString()
 

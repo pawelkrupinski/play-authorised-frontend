@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.play.frontend.auth
 
+import java.net.URI
+
 import play.api.mvc.Results._
 import play.api.mvc.{Result, _}
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.LevelOfAssurance.LevelOfAssurance
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
@@ -30,12 +32,20 @@ trait PageVisibilityPredicate {
   def nonVisibleResult: Result = NotFound
 }
 
-case class LoaPredicate(requiredLevelOfAssurance: LevelOfAssurance) extends PageVisibilityPredicate {
+class UpliftingIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, upliftConfidenceUri: URI)
+  extends PageVisibilityPredicate {
   override def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean] =
-    Future.successful(authContext.user.levelOfAssurance >= requiredLevelOfAssurance)
+    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
+
+  override def nonVisibleResult: Result = Redirect(upliftConfidenceUri.toString)
+}
+
+class NonNegotiableIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel)
+  extends PageVisibilityPredicate {
+  override def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean] =
+    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
 
   override def nonVisibleResult: Result = Forbidden
-
 }
 
 private[auth] object WithPageVisibility {
@@ -53,6 +63,6 @@ private[auth] object WithPageVisibility {
     }
 }
 
-object DefaultPageVisibilityPredicate extends PageVisibilityPredicate {
+object AllowAll extends PageVisibilityPredicate {
   def isVisible(authContext: AuthContext, request: Request[AnyContent]) = Future.successful(true)
 }

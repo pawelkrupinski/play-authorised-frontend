@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.play.frontend.auth
 
+import java.net.URI
 import java.util.UUID
 
 import org.mockito.Matchers
@@ -27,7 +28,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.domain.SaUtr
 import uk.gov.hmrc.play.frontend.auth.connectors.AuthConnector
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.{Accounts, Authority, LevelOfAssurance, SaAccount}
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.{Accounts, Authority, ConfidenceLevel, SaAccount}
 import uk.gov.hmrc.play.http.SessionKeys
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -63,16 +64,17 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
       contentAsString(result) should include("jdensmore")
     }
 
-    "respond 403 if the user has insufficient LoA" in  {
+    "redirect user to uplift if the user has insufficient confidence" in  {
       when(mockAuthConnector.currentAuthority(Matchers.any())).thenReturn(Some(lowAssuranceUser))
       val result = testedActions.testAuthorisation(requestFromLoggedInUser)
 
-      status(result) should be (403)
+      status(result) should be (303)
+      redirectLocation(result).get shouldBe "/mdtp/uplift?cl=500"
     }
   }
 
   def lowAssuranceUser: Authority = {
-    Authority(s"/auth/oid/jdensmore", Accounts(sa = Some(SaAccount(s"/sa/individual/AB123456C", SaUtr("AB123456C")))), None, None, LevelOfAssurance.LOA_1_5)
+    Authority(s"/auth/oid/jdensmore", Accounts(sa = Some(SaAccount(s"/sa/individual/AB123456C", SaUtr("AB123456C")))), None, None, ConfidenceLevel.L100)
   }
 
   def requestFromLoggedInUser: FakeRequest[AnyContentAsEmpty.type] = {
@@ -84,7 +86,7 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
   }
 
   def saAuthority(id: String, utr: String): Authority =
-    Authority(s"/auth/oid/$id",  Accounts(sa = Some(SaAccount(s"/sa/individual/$utr", SaUtr(utr)))), None, None, LevelOfAssurance.LOA_2)
+    Authority(s"/auth/oid/$id",  Accounts(sa = Some(SaAccount(s"/sa/individual/$utr", SaUtr(utr)))), None, None, ConfidenceLevel.L500)
 }
 
 sealed class TestController
@@ -92,13 +94,13 @@ sealed class TestController
 
   this: Authoriser =>
 
-  def testAuthorisation = AuthorisedFor(TestTaxRegime) {
+  def testAuthorisation = AuthorisedFor(TestTaxRegime, pageVisibility = new UpliftingIdentityConfidencePredicate(ConfidenceLevel.L500, new URI("/mdtp/uplift?cl=500"))) {
     implicit authContext =>
       implicit request =>
         Ok("jdensmore")
   }
 
-  def testAuthorisationWithRedirectCommand = AuthenticatedBy(authenticationProvider = TestAuthenticationProvider, redirectToOrigin = true) {
+  def testAuthorisationWithRedirectCommand = AuthenticatedBy(authenticationProvider = TestAuthenticationProvider, redirectToOrigin = true, new NonNegotiableIdentityConfidencePredicate(ConfidenceLevel.L500)) {
     implicit authContext =>
       implicit request =>
         Ok("jdensmore")
