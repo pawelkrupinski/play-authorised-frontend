@@ -18,6 +18,7 @@ package uk.gov.hmrc.play.frontend.auth.connectors.domain
 
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.play.controllers.RestFormats
 import uk.gov.hmrc.time.DateTimeUtils
@@ -60,6 +61,23 @@ object ConfidenceLevel {
     val writes = Writes[ConfidenceLevel] { level => JsNumber(level.level) }
     Format(reads, writes)
   }
+
+  implicit val Binder = new QueryStringBindable[ConfidenceLevel] {
+
+     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ConfidenceLevel]] = {
+       val boundInt = QueryStringBindable.bindableInt.bind(key, params)
+       boundInt map {
+         case Right(intValue) => try {
+           Right(ConfidenceLevel.fromInt(intValue))
+         } catch {
+           case e: NoSuchElementException => Left(s"'$intValue' is not a valid confidenceLevel")
+         }
+         case Left(value) => Left(value)
+       }
+     }
+
+     def unbind(key: String, value: ConfidenceLevel): String = QueryStringBindable.bindableInt.unbind(key, value.level)
+   }
 }
 
 case class Authority(uri: String,
