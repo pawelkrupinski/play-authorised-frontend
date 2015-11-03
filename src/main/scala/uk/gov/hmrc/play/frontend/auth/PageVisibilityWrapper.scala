@@ -29,24 +29,23 @@ import scala.concurrent._
 trait PageVisibilityPredicate {
   def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean]
 
-  def nonVisibleResult: Result = NotFound
+  def nonVisibleResult: Future[Result] = Future.successful(NotFound)
+}
+
+class IdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, failedConfidenceResult: => Future[Result])
+  extends PageVisibilityPredicate {
+
+  override def isVisible(authContext: AuthContext, request: Request[AnyContent]) =
+    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
+
+  override def nonVisibleResult = failedConfidenceResult
 }
 
 class UpliftingIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, upliftConfidenceUri: URI)
-  extends PageVisibilityPredicate {
-  override def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean] =
-    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
-
-  override def nonVisibleResult: Result = Redirect(upliftConfidenceUri.toString)
-}
+  extends IdentityConfidencePredicate(requiredConfidenceLevel, Future.successful(Redirect(upliftConfidenceUri.toString)))
 
 class NonNegotiableIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel)
-  extends PageVisibilityPredicate {
-  override def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean] =
-    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
-
-  override def nonVisibleResult: Result = Forbidden
-}
+  extends IdentityConfidencePredicate(requiredConfidenceLevel, Future.successful(Forbidden))
 
 private[auth] object WithPageVisibility {
 
@@ -58,7 +57,7 @@ private[auth] object WithPageVisibility {
           if (visible)
             action(authContext)(request)
           else
-            Action(predicate.nonVisibleResult)(request)
+            Action.async(predicate.nonVisibleResult)(request)
         }
     }
 }
