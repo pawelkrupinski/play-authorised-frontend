@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.frontend.auth
 
 import play.api.mvc._
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.LevelOfAssurance.LOA_2
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel
 
 import scala.concurrent.Future
 
@@ -40,28 +40,33 @@ sealed trait UserActions
 
   type UserAction = AuthContext => Action[AnyContent]
 
+  val VerifyConfidence = new NonNegotiableIdentityConfidencePredicate(ConfidenceLevel.L500)
+  val GGConfidence = new NonNegotiableIdentityConfidencePredicate(ConfidenceLevel.L50)
+
   implicit def makeAction(body: PlayUserRequest): UserAction = (authContext: AuthContext) => Action(body(authContext))
 
   implicit def makeFutureAction(body: AsyncPlayUserRequest): UserAction = (authAction: AuthContext) => Action.async(body(authAction))
 
   def AuthorisedFor(taxRegime: TaxRegime,
                     redirectToOrigin: Boolean = false,
-                    pageVisibility: PageVisibilityPredicate = LoaPredicate(LOA_2))
-  = new AuthenticatedBy(taxRegime.authenticationType, Some(taxRegime), redirectToOrigin, pageVisibility)
+                    pageVisibility: PageVisibilityPredicate) =
+    new AuthenticatedBy(taxRegime.authenticationType, Some(taxRegime), redirectToOrigin, pageVisibility)
 
   def AuthenticatedBy(authenticationProvider: AuthenticationProvider,
                       redirectToOrigin: Boolean = false,
-                      pageVisibility: PageVisibilityPredicate = LoaPredicate(LOA_2))
-  = new AuthenticatedBy(authenticationProvider, None, redirectToOrigin, pageVisibility)
+                      pageVisibility: PageVisibilityPredicate) =
+    new AuthenticatedBy(authenticationProvider, None, redirectToOrigin, pageVisibility)
 
 
   class AuthenticatedBy(authenticationProvider: AuthenticationProvider,
                         taxRegime: Option[TaxRegime],
                         redirectToOrigin: Boolean,
                         pageVisibility: PageVisibilityPredicate) extends AuthenticatedAction {
-    def apply(body: PlayUserRequest): Action[AnyContent] = authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
+    def apply(body: PlayUserRequest): Action[AnyContent] =
+      authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
 
-    def async(body: AsyncPlayUserRequest): Action[AnyContent] = authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
+    def async(body: AsyncPlayUserRequest): Action[AnyContent] =
+      authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
 
     private def authorised(authenticationProvider: AuthenticationProvider,
                            taxRegime: Option[TaxRegime],

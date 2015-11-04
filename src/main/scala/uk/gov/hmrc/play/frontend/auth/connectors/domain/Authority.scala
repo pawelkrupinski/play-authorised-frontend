@@ -18,44 +18,79 @@ package uk.gov.hmrc.play.frontend.auth.connectors.domain
 
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.play.controllers.RestFormats
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.LevelOfAssurance.LevelOfAssurance
 import uk.gov.hmrc.time.DateTimeUtils
 
+import scala.util.{Failure, Success, Try}
 
-object LevelOfAssurance extends Enumeration {
-  type LevelOfAssurance = Value
-  val LOA_1 = Value("1")
-  val LOA_1_5 = Value("1.5")
-  val LOA_2 = Value("2")
 
-  implicit val format = new Format[LevelOfAssurance] {
+sealed abstract class ConfidenceLevel(val level: Int) extends Ordered[ConfidenceLevel] {
+  def compare(that: ConfidenceLevel) = this.level.compare(that.level)
+  override val toString = level.toString
+}
 
-    override def reads(json: JsValue): JsResult[LevelOfAssurance] = json match {
-      case JsString(v) => try {
-        JsSuccess(LevelOfAssurance.withName(v))
-      } catch {
-        case e: NoSuchElementException => JsError(s"Invalid value for LevelOfAssurance: '$v'")
-      }
-      case _ => JsError("String value expected")
-    }
+object ConfidenceLevel {
+  case object L500 extends ConfidenceLevel(500)
+  case object L300 extends ConfidenceLevel(300)
+  case object L200 extends ConfidenceLevel(200)
+  case object L100 extends ConfidenceLevel(100)
+  case object L50 extends ConfidenceLevel(50)
+  case object L0 extends ConfidenceLevel(0)
 
-    override def writes(v: LevelOfAssurance): JsValue = JsString(v.toString)
+  val all = Set(L0, L50, L100, L200, L300, L500)
+
+  def fromInt(level: Int): ConfidenceLevel = level match {
+    case 500 => L500
+    case 300 => L300
+    case 200 => L200
+    case 100 => L100
+    case 50 => L50
+    case 0   => L0
+    case _   => throw new NoSuchElementException(s"Illegal confidence level: $level")
   }
+
+  implicit val format: Format[ConfidenceLevel] = {
+    val reads = Reads[ConfidenceLevel] { json =>
+      Try { fromInt(json.as[Int]) } match {
+        case Success(level) => JsSuccess(level)
+        case Failure(ex) => JsError(ex.getMessage)
+      }
+    }
+    val writes = Writes[ConfidenceLevel] { level => JsNumber(level.level) }
+    Format(reads, writes)
+  }
+
+  implicit val Binder = new QueryStringBindable[ConfidenceLevel] {
+
+     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ConfidenceLevel]] = {
+       val boundInt = QueryStringBindable.bindableInt.bind(key, params)
+       boundInt map {
+         case Right(intValue) => try {
+           Right(ConfidenceLevel.fromInt(intValue))
+         } catch {
+           case e: NoSuchElementException => Left(s"'$intValue' is not a valid confidenceLevel")
+         }
+         case Left(value) => Left(value)
+       }
+     }
+
+     def unbind(key: String, value: ConfidenceLevel): String = QueryStringBindable.bindableInt.unbind(key, value.level)
+   }
 }
 
 case class Authority(uri: String,
                      accounts: Accounts,
                      loggedInAt: Option[DateTime],
                      previouslyLoggedInAt: Option[DateTime],
-                     levelOfAssurance: LevelOfAssurance = LevelOfAssurance.LOA_2)
+                     confidenceLevel: ConfidenceLevel)
 
 object Authority {
   implicit val format = {
     implicit val dateFormat = RestFormats.dateTimeFormats
     implicit val accountsFormat = Accounts.format
-    implicit val levelOfAssuranceFormat = LevelOfAssurance.format
+    implicit val confidenceLevelFormat = ConfidenceLevel.format
     Json.format[Authority]
   }
 }

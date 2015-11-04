@@ -18,7 +18,7 @@ package uk.gov.hmrc.play.frontend.auth
 
 import org.joda.time.{DateTime, DateTimeZone}
 import uk.gov.hmrc.domain.{Nino, SaUtr, Vrn}
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.LevelOfAssurance._
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel._
 import uk.gov.hmrc.play.frontend.auth.connectors.domain._
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -46,7 +46,8 @@ class AuthContextSpec extends UnitSpec {
       uri = SessionData.userId,
       accounts = accounts,
       loggedInAt = loggedInAt,
-      previouslyLoggedInAt = previouslyLoggedInAt
+      previouslyLoggedInAt = previouslyLoggedInAt,
+      confidenceLevel = L500
     )
   }
 
@@ -65,7 +66,7 @@ class AuthContextSpec extends UnitSpec {
     loggedInAt = AuthData.loggedInAt,
     previouslyLoggedInAt = AuthData.previouslyLoggedInAt,
     governmentGatewayToken = SessionData.governmentGatewayToken,
-    levelOfAssurance = LOA_2
+    confidenceLevel = L500
   )
 
   object ExpectationsWhenNotDelegating {
@@ -109,9 +110,9 @@ class AuthContextSpec extends UnitSpec {
 
   "The isDelegating flag" should {
 
-    val loggedInUser = LoggedInUser("uid", None, None, None, LOA_2)
+    val loggedInUser = LoggedInUser("uid", None, None, None, L500)
     val principal = Principal(Some("Bob P"), Accounts())
-    
+
     "be true if the attorney is defined" in {
       AuthContext(loggedInUser, principal, Some(Attorney("Dave A", Link("A", "A")))).isDelegating shouldBe true
     }
