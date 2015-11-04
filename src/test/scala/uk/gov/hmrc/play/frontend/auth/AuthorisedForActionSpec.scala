@@ -100,7 +100,7 @@ sealed class TestController
         Ok("jdensmore")
   }
 
-  def testAuthorisationWithRedirectCommand = AuthenticatedBy(authenticationProvider = TestAuthenticationProvider, redirectToOrigin = true, new NonNegotiableIdentityConfidencePredicate(ConfidenceLevel.L500)) {
+  def testAuthorisationWithRedirectCommand = AuthenticatedBy(authenticationProvider = TestAuthenticationProvider, new NonNegotiableIdentityConfidencePredicate(ConfidenceLevel.L500)) {
     implicit authContext =>
       implicit request =>
         Ok("jdensmore")
@@ -114,13 +114,13 @@ object TestAuthenticationProvider extends AuthenticationProvider {
 
   def login = "/login"
 
-  def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Results.Redirect(login))
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Results.Redirect(login))
 
-  def handleNotAuthenticated(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
+  def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, None) =>
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
     case UserCredentials(Some(userId), None) =>
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
   }
 }
 

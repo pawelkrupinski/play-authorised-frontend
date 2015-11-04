@@ -37,13 +37,13 @@ trait AuthenticationProvider {
 
   def id: String
 
-  def redirectToLogin(redirectToOrigin: Boolean = false)(implicit request: Request[AnyContent]): Future[Result]
+  def redirectToLogin(implicit request: Request[_]): Future[Result]
 
-  def handleSessionTimeout(implicit request: Request[AnyContent]): Future[Result] = redirectToLogin(redirectToOrigin = false)
+  def handleSessionTimeout(implicit request: Request[_]): Future[Result] = redirectToLogin
 
-  def handleNotAuthenticated(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]]
+  def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]]
 
-  def handleAuthenticated(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, Result]]] = PartialFunction.empty
+  def handleAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, Result]]] = PartialFunction.empty
 
   implicit def hc(implicit request: Request[_]) = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
 }
@@ -54,15 +54,15 @@ trait GovernmentGateway extends AuthenticationProvider {
 
   def login: String
 
-  def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Redirect(login))
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
 
-  def handleNotAuthenticated(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
+  def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, token@_) =>
       Logger.info(s"No userId found - redirecting to login. user: None token : $token")
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
     case UserCredentials(Some(userId), None) =>
       Logger.info(s"No gateway token - redirecting to login. user : $userId token : None")
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
   }
 }
 
@@ -72,12 +72,12 @@ trait Verify extends AuthenticationProvider {
 
   def login: String
 
-  def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Redirect(login))
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
 
-  def handleNotAuthenticated(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
+  def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, None) =>
       Logger.info(s"No userId found - unauthorized. user: None")
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
   }
 }
 
@@ -90,21 +90,21 @@ trait AnyAuthenticationProvider extends AuthenticationProvider {
 
   def login: String
 
-  def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Redirect(login))
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
 
-  private def handleMissingProvider(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
+  private def handleMissingProvider(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case _ =>
       Logger.info("No provider in the session")
-      redirectToLogin(redirectToOrigin).map(Right(_))
+      redirectToLogin.map(Right(_))
   }
 
-  def handleNotAuthenticated(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) =
+  def handleNotAuthenticated(implicit request: Request[_]) =
     request.session.get(SessionKeys.authProvider) match {
       case Some(AuthenticationProviderIds.GovernmentGatewayId) =>
-        ggwAuthenticationProvider.handleNotAuthenticated(redirectToOrigin)
+        ggwAuthenticationProvider.handleNotAuthenticated
       case Some(AuthenticationProviderIds.VerifyProviderId) =>
-        verifyAuthenticationProvider.handleNotAuthenticated(redirectToOrigin)
+        verifyAuthenticationProvider.handleNotAuthenticated
       case _ =>
-        handleMissingProvider(redirectToOrigin)
+        handleMissingProvider
     }
 }

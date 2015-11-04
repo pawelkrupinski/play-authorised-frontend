@@ -120,21 +120,21 @@ class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with Integra
 
     override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway {
       override def login: String = throw new IllegalStateException("Should be no redirect to login")
-      override def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Unauthorized)
+      override def redirectToLogin(implicit request: Request[_]) = Future.successful(Unauthorized)
     }
 
     override def verifyAuthenticationProvider: Verify = new Verify {
       override def login: String = throw new IllegalStateException("Should be no redirect to login")
-      override def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Unauthorized)
+      override def redirectToLogin(implicit request: Request[_]) = Future.successful(Unauthorized)
     }
 
-    override def redirectToLogin(redirectToOrigin: Boolean)(implicit request: Request[AnyContent]) = Future.successful(Unauthorized)
+    override def redirectToLogin(implicit request: Request[_]) = Future.successful(Unauthorized)
   }
 
   class AnyAuthProviderTestCase(authProviderInSession: Option[String]) {
     val request = authProviderInSession.foldLeft(FakeRequest())((req, provider) => req.withSession(SessionKeys.authProvider -> provider))
     def anyAuthProviderForTest: AnyAuthenticationProvider = new AnyAuthenticationProviderForTest()
-    val handleNotAuthenticated = anyAuthProviderForTest.handleNotAuthenticated(redirectToOrigin = false)(request)
+    val handleNotAuthenticated = anyAuthProviderForTest.handleNotAuthenticated(request)
   }
 
   class AnyAuthProviderTestCaseNoRedirect(authProviderInSession: Option[String])

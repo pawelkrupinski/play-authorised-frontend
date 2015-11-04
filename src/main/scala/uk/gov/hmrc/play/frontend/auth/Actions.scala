@@ -48,33 +48,29 @@ sealed trait UserActions
   implicit def makeFutureAction(body: AsyncPlayUserRequest): UserAction = (authAction: AuthContext) => Action.async(body(authAction))
 
   def AuthorisedFor(taxRegime: TaxRegime,
-                    redirectToOrigin: Boolean = false,
                     pageVisibility: PageVisibilityPredicate) =
-    new AuthenticatedBy(taxRegime.authenticationType, Some(taxRegime), redirectToOrigin, pageVisibility)
+    new AuthenticatedBy(taxRegime.authenticationType, Some(taxRegime), pageVisibility)
 
   def AuthenticatedBy(authenticationProvider: AuthenticationProvider,
-                      redirectToOrigin: Boolean = false,
                       pageVisibility: PageVisibilityPredicate) =
-    new AuthenticatedBy(authenticationProvider, None, redirectToOrigin, pageVisibility)
+    new AuthenticatedBy(authenticationProvider, None, pageVisibility)
 
 
   class AuthenticatedBy(authenticationProvider: AuthenticationProvider,
                         taxRegime: Option[TaxRegime],
-                        redirectToOrigin: Boolean,
                         pageVisibility: PageVisibilityPredicate) extends AuthenticatedAction {
     def apply(body: PlayUserRequest): Action[AnyContent] =
-      authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
+      authorised(authenticationProvider, taxRegime, pageVisibility, body)
 
     def async(body: AsyncPlayUserRequest): Action[AnyContent] =
-      authorised(authenticationProvider, taxRegime, redirectToOrigin, pageVisibility, body)
+      authorised(authenticationProvider, taxRegime, pageVisibility, body)
 
     private def authorised(authenticationProvider: AuthenticationProvider,
                            taxRegime: Option[TaxRegime],
-                           redirectToOrigin: Boolean,
                            pageVisibility: PageVisibilityPredicate,
                            body: UserAction) =
       WithSessionTimeoutValidation(authenticationProvider) {
-        WithUserAuthenticatedBy(authenticationProvider, taxRegime, redirectToOrigin) {
+        WithUserAuthenticatedBy(authenticationProvider, taxRegime) {
           authContext =>
             WithPageVisibility(pageVisibility, authContext) {
               implicit authContext => body(authContext)

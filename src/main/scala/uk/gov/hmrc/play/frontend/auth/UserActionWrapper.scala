@@ -28,15 +28,14 @@ trait UserActionWrapper extends Results {
   self: AuthContextService =>
 
   private[auth] def WithUserAuthenticatedBy(authenticationProvider: AuthenticationProvider,
-                                            taxRegime: Option[TaxRegime],
-                                            redirectToOrigin: Boolean)
+                                            taxRegime: Option[TaxRegime])
                                            (userAction: AuthContext => Action[AnyContent]): Action[AnyContent] =
     Action.async {
       implicit request =>
         implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
         Logger.info(s"WithUserAuthorisedBy using auth provider ${authenticationProvider.id}")
         val handle =
-          authenticationProvider.handleNotAuthenticated(redirectToOrigin) orElse
+          authenticationProvider.handleNotAuthenticated orElse
             authenticationProvider.handleAuthenticated orElse
             handleAuthenticated(taxRegime, authenticationProvider)
 
@@ -59,13 +58,13 @@ trait UserActionWrapper extends Results {
             Logger.info("user not authorised for " + regime.getClass)
             regime.unauthorisedLandingPage match {
               case Some(redirectUrl) => Future.successful(Right(Redirect(redirectUrl)))
-              case None => authenticationProvider.redirectToLogin(redirectToOrigin = false).map(Right(_))
+              case None => authenticationProvider.redirectToLogin.map(Right(_))
             }
           case _ => Future.successful(Left(authContext))
         }
         case None =>
           Logger.warn(s"No authority found for user id '$userId' from '${request.remoteAddress}'")
-          authenticationProvider.redirectToLogin(redirectToOrigin = false).map {
+          authenticationProvider.redirectToLogin.map {
             result =>
               Right(result.withNewSession)
           }

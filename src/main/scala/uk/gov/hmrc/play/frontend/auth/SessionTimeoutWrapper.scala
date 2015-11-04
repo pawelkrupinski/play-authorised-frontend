@@ -41,21 +41,17 @@ trait SessionTimeoutWrapper  {
 object AuthorisedSessionTimeoutWrapper {
   val timeoutSeconds = 900
 
-  def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
-    extractTimestamp(session) match {
-      case Some(time) => !isTimestampValid(time, now)
-      case _ => false
-    }
-  }
+  def userNeedsNewSession(session: Session, now: () => DateTime): Boolean =
+    extractTimestamp(session).fold(false)(hasExpired(now))
 
-  private def isTimestampValid(timestamp: DateTime, now: () => DateTime): Boolean = {
+  private def hasExpired(now: () => DateTime)(timestamp: DateTime): Boolean = {
     val timeOfExpiry = timestamp plus Duration.standardSeconds(timeoutSeconds)
-    now() isBefore timeOfExpiry
+    now() isAfter timeOfExpiry
   }
 
   private def extractTimestamp(session: Session): Option[DateTime] = {
     try {
-      session.get(SessionKeys.lastRequestTimestamp) map (timestamp => new DateTime(timestamp.toLong, DateTimeZone.UTC))
+      session.get(SessionKeys.lastRequestTimestamp) map (t => new DateTime(t.toLong, DateTimeZone.UTC))
     } catch {
       case e: NumberFormatException => None
     }
