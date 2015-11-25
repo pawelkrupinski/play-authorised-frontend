@@ -19,26 +19,52 @@ package uk.gov.hmrc.play.frontend.auth
 import java.net.URI
 
 import play.api.mvc.Results._
-import play.api.mvc.{Result, _}
+import play.api.mvc._
 import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent._
 
-trait PageVisibilityPredicate {
-  def isVisible(authContext: AuthContext, request: Request[AnyContent]): Future[Boolean]
-
+trait PageVisibilityResult {
+  def isVisible: Boolean
   def nonVisibleResult: Future[Result] = Future.successful(NotFound)
+}
+
+object PageIsVisible extends PageVisibilityResult {
+  override def isVisible: Boolean = true
+}
+
+case class PageBlocked(override val nonVisibleResult: Future[Result]) extends PageVisibilityResult {
+  override def isVisible: Boolean = false
 }
 
 class IdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, failedConfidenceResult: => Future[Result])
   extends PageVisibilityPredicate {
 
-  override def isVisible(authContext: AuthContext, request: Request[AnyContent]) =
-    Future.successful(authContext.user.confidenceLevel >= requiredConfidenceLevel)
+  def apply(authContext: AuthContext, request: Request[AnyContent]) = Future.successful(new PageVisibilityResult {
+    override def isVisible =
+      authContext.user.confidenceLevel >= requiredConfidenceLevel
 
-  override def nonVisibleResult = failedConfidenceResult
+    override def nonVisibleResult = failedConfidenceResult
+  })
+}
+
+trait CompositePageVisibilityPredicate extends PageVisibilityPredicate {
+
+  def children: Seq[PageVisibilityPredicate]
+
+  override def apply(authContext: AuthContext, request: Request[AnyContent]): Future[PageVisibilityResult] = {
+    implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+
+    children.foldLeft[Future[PageVisibilityResult]](Future.successful(PageIsVisible)) { (eventualPriorResult, currentPredicate) =>
+      eventualPriorResult.flatMap { priorResult =>
+        if (priorResult.isVisible) currentPredicate(authContext, request)
+        else eventualPriorResult
+      }
+    }
+
+  }
 }
 
 class UpliftingIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, upliftConfidenceUri: URI)
@@ -49,19 +75,23 @@ class NonNegotiableIdentityConfidencePredicate(requiredConfidenceLevel: Confiden
 
 private[auth] object WithPageVisibility {
 
+
   def apply(predicate: PageVisibilityPredicate, authContext: AuthContext)(action: AuthContext => Action[AnyContent]): Action[AnyContent] =
     Action.async {
       request =>
-        implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
-        predicate.isVisible(authContext, request).flatMap { visible =>
-          if (visible)
+        implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+        predicate(authContext, request).flatMap { visible =>
+          if (visible.isVisible)
             action(authContext)(request)
           else
-            Action.async(predicate.nonVisibleResult)(request)
+            Action.async(visible.nonVisibleResult)(request)
         }
     }
 }
 
 object AllowAll extends PageVisibilityPredicate {
-  def isVisible(authContext: AuthContext, request: Request[AnyContent]) = Future.successful(true)
+  
+  def apply(authContext: AuthContext, request: Request[AnyContent]) = Future.successful(new PageVisibilityResult {
+    override def isVisible: Boolean = true
+  })
 }
