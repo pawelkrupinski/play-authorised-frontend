@@ -35,7 +35,7 @@ object PageIsVisible extends PageVisibilityResult {
   override def isVisible: Boolean = true
 }
 
-class PageBlocked(override val nonVisibleResult: Future[Result]) extends PageVisibilityResult {
+case class PageBlocked(override val nonVisibleResult: Future[Result]) extends PageVisibilityResult {
   override def isVisible: Boolean = false
 }
 
@@ -48,6 +48,23 @@ class IdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, fail
 
     override def nonVisibleResult = failedConfidenceResult
   })
+}
+
+trait CompositePageVisibilityPredicate extends PageVisibilityPredicate {
+
+  def children: Seq[PageVisibilityPredicate]
+
+  override def apply(authContext: AuthContext, request: Request[AnyContent]): Future[PageVisibilityResult] = {
+    implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+
+    children.foldLeft[Future[PageVisibilityResult]](Future.successful(PageIsVisible)) { (eventualPriorResult, currentPredicate) =>
+      eventualPriorResult.flatMap { priorResult =>
+        if (priorResult.isVisible) currentPredicate(authContext, request)
+        else eventualPriorResult
+      }
+    }
+
+  }
 }
 
 class UpliftingIdentityConfidencePredicate(requiredConfidenceLevel: ConfidenceLevel, upliftConfidenceUri: URI)
