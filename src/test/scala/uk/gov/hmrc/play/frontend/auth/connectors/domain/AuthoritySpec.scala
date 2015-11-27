@@ -30,12 +30,15 @@ class AuthoritySpec extends UnitSpec with WithFakeApplication {
         Accounts(paye = Some(PayeAccount("/paye/AA000002B", Nino("AA000002B"))), iht = Some(IhtAccount("/iht/AA000002B", Nino("AA000002B")))),
         None,
         None,
+        CredentialStrength.Strong,
         ConfidenceLevel.L500)
 
       val jsonString = Json.toJson(authority).toString()
 
-      jsonString should include ("\"paye\":{\"link\":\"/paye/AA000002B\",\"nino\":\"AA000002B\"}")
-      jsonString should include ("\"iht\":{\"link\":\"/iht/AA000002B\",\"nino\":\"AA000002B\"}")
+      jsonString should include (""""paye":{"link":"/paye/AA000002B","nino":"AA000002B"}""")
+      jsonString should include (""""iht":{"link":"/iht/AA000002B","nino":"AA000002B"}""")
+      jsonString should include (""""credentialStrength":"strong"""")
+      jsonString should include (""""confidenceLevel":500""")
 
       val roundTrippedAuthority = Json.parse(jsonString).as[Authority]
 

@@ -80,10 +80,38 @@ object ConfidenceLevel {
    }
 }
 
+sealed abstract class CredentialStrength(val name: String)
+
+object CredentialStrength {
+
+  case object Strong extends CredentialStrength("strong")
+  case object Weak extends CredentialStrength("weak")
+  case object None extends CredentialStrength("none")
+
+  val fromName: String => CredentialStrength = Seq(Strong, Weak, None).map(c => c.name -> c).toMap
+
+  implicit val format = {
+    val reads = new Reads[CredentialStrength] {
+      override def reads(json: JsValue) =
+        try {
+          JsSuccess(fromName(json.as[String]))
+        } catch {
+          case (_) => JsError()
+        }
+    }
+    val writes = new Writes[CredentialStrength] {
+      override def writes(o: CredentialStrength) = new JsString(o.name)
+    }
+    Format(reads, writes)
+  }
+
+}
+
 case class Authority(uri: String,
                      accounts: Accounts,
                      loggedInAt: Option[DateTime],
                      previouslyLoggedInAt: Option[DateTime],
+                     credentialStrength: CredentialStrength,
                      confidenceLevel: ConfidenceLevel)
 
 object Authority {
