@@ -28,7 +28,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.domain.SaUtr
 import uk.gov.hmrc.play.frontend.auth.connectors.AuthConnector
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.{Accounts, Authority, ConfidenceLevel, SaAccount}
+import uk.gov.hmrc.play.frontend.auth.connectors.domain._
 import uk.gov.hmrc.play.http.SessionKeys
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -74,7 +74,13 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
   }
 
   def lowAssuranceUser: Authority = {
-    Authority(s"/auth/oid/jdensmore", Accounts(sa = Some(SaAccount(s"/sa/individual/AB123456C", SaUtr("AB123456C")))), None, None, ConfidenceLevel.L100)
+    Authority(
+      s"/auth/oid/jdensmore",
+      Accounts(sa = Some(SaAccount(s"/sa/individual/AB123456C", SaUtr("AB123456C")))),
+      None,
+      None,
+      CredentialStrength.Weak,
+      ConfidenceLevel.L100)
   }
 
   def requestFromLoggedInUser: FakeRequest[AnyContentAsEmpty.type] = {
@@ -86,7 +92,13 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
   }
 
   def saAuthority(id: String, utr: String): Authority =
-    Authority(s"/auth/oid/$id",  Accounts(sa = Some(SaAccount(s"/sa/individual/$utr", SaUtr(utr)))), None, None, ConfidenceLevel.L500)
+    Authority(
+      s"/auth/oid/$id",
+      Accounts(sa = Some(SaAccount(s"/sa/individual/$utr", SaUtr(utr)))),
+      None,
+      None,
+      CredentialStrength.Strong,
+      ConfidenceLevel.L500)
 }
 
 sealed class TestController

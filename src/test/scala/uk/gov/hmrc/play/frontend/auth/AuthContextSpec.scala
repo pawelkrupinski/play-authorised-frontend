@@ -47,6 +47,7 @@ class AuthContextSpec extends UnitSpec {
       accounts = accounts,
       loggedInAt = loggedInAt,
       previouslyLoggedInAt = previouslyLoggedInAt,
+      credentialStrength = CredentialStrength.Strong,
       confidenceLevel = L500
     )
   }

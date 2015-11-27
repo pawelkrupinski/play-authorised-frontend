@@ -21,6 +21,7 @@ import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import uk.gov.hmrc.domain.{CtUtr, Nino, SaUtr}
 import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel.L500
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.CredentialStrength
 import uk.gov.hmrc.play.frontend.auth.connectors.{AuthConnector, DelegationConnector, domain}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
@@ -367,6 +368,7 @@ trait AuthContextServiceTestCase extends MockitoSugar {
       accounts = accounts,
       loggedInAt = loggedInAt,
       previouslyLoggedInAt = previouslyLoggedInAt,
+      CredentialStrength.Strong,
       confidenceLevel = L500
     )
   }
