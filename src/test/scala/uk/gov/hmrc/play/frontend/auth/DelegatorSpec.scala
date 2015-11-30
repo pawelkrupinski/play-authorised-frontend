@@ -21,7 +21,6 @@ import play.api.mvc.{RequestHeader, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.domain.{AgentCode, AgentUserId, Nino, SaUtr}
 import uk.gov.hmrc.play.frontend.auth.connectors.DelegationConnector
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel._
 import uk.gov.hmrc.play.frontend.auth.connectors.domain._
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -33,7 +32,7 @@ class DelegatorSpec extends UnitSpec with WithFakeApplication with Results {
   import org.mockito.Mockito._
 
   implicit val authContext = AuthContext(
-    user = LoggedInUser("/auth/oid/1234", None, None, None, L500),
+    user = LoggedInUser("/auth/oid/1234", None, None, None, CredentialStrength.Strong, ConfidenceLevel.L500),
     principal = Principal(
       name = Some("Dave Agent"),
       accounts = Accounts(agent = Some(AgentAccount(

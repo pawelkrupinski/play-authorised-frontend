@@ -20,7 +20,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import uk.gov.hmrc.domain.{CtUtr, Nino, SaUtr}
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel.L500
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel
 import uk.gov.hmrc.play.frontend.auth.connectors.domain.CredentialStrength
 import uk.gov.hmrc.play.frontend.auth.connectors.{AuthConnector, DelegationConnector, domain}
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -34,7 +34,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
   class TestSetup(val delegationSessionFlag: DelegationState, val returnDataFromDelegationService: Boolean = true)
 
   case object DelegationOffButDataAvailable extends TestSetup(DelegationOff)
+
   case object DelegationOnButNoData extends TestSetup(DelegationOn, returnDataFromDelegationService = false)
+
   case object DelegationOnAndDataAvailable extends TestSetup(DelegationOn)
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -81,11 +83,18 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, Some(session.governmentGatewayToken), L500),
-        principal = Principal(Some(delegationData.principalName), delegationData.accounts),
-        attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            Some(session.governmentGatewayToken),
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(delegationData.principalName), delegationData.accounts),
+          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
+        ))
     }
 
     "create the correct AuthContext if the governmentGatewayToken passed in is None" in new TestCase(DelegationOnAndDataAvailable) {
@@ -101,11 +110,18 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, None, L500),
-        principal = Principal(Some(delegationData.principalName), delegationData.accounts),
-        attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            None,
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(delegationData.principalName), delegationData.accounts),
+          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
+        ))
     }
 
     returnNoneIfTheAuthorityIsMissingOrInvalid(DelegationOnAndDataAvailable)
@@ -126,11 +142,18 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, Some(session.governmentGatewayToken), L500),
-        principal = Principal(Some(session.name), userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            Some(session.governmentGatewayToken),
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(session.name), userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
 
     "create the correct AuthContext if the governmentGatewayToken passed in is None" in new TestCase(testSetup) {
@@ -146,11 +169,18 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, None, L500),
-        principal = Principal(Some(session.name), userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            None,
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(session.name), userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
 
     "create the correct AuthContext if the nameFromSession passed in is None" in new TestCase(testSetup) {
@@ -166,11 +196,18 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, Some(session.governmentGatewayToken), L500),
-        principal = Principal(None, userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            Some(session.governmentGatewayToken),
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(None, userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
   }
 
@@ -194,7 +231,7 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
     }
 
   }
-  
+
   private abstract class TestCase(testSetup: TestSetup) extends AuthContextServiceTestCase {
 
     val mockDelegationConnector: DelegationConnector = mock[DelegationConnector]
@@ -217,6 +254,7 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
       override protected val delegationConnector = mockDelegationConnector
     }
   }
+
 }
 
 
@@ -266,11 +304,18 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, Some(session.governmentGatewayToken), L500),
-        principal = Principal(Some(session.name), userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            Some(session.governmentGatewayToken),
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(session.name), userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
 
     "create the correct AuthContext if the governmentGatewayToken passed in is None" in new TestCase {
@@ -286,11 +331,18 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, None, L500),
-        principal = Principal(Some(session.name), userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            None,
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(Some(session.name), userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
 
     "create the correct AuthContext if the nameFromSession passed in is None" in new TestCase {
@@ -306,11 +358,18 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
 
       val authContext = await(service.currentAuthContext(sessionData))
 
-      authContext shouldBe Some(AuthContext(
-        user = LoggedInUser(session.userId, userAtKeyboard.loggedInAt, userAtKeyboard.previouslyLoggedInAt, Some(session.governmentGatewayToken), L500),
-        principal = Principal(None, userAtKeyboard.accounts),
-        attorney = None
-      ))
+      authContext shouldBe Some(
+        AuthContext(
+          user = LoggedInUser(
+            session.userId,
+            userAtKeyboard.loggedInAt,
+            userAtKeyboard.previouslyLoggedInAt,
+            Some(session.governmentGatewayToken),
+            CredentialStrength.Strong,
+            ConfidenceLevel.L500),
+          principal = Principal(None, userAtKeyboard.accounts),
+          attorney = None
+        ))
     }
   }
 
@@ -339,6 +398,7 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
       override protected val authConnector = mockAuthConnector
     }
   }
+
 }
 
 trait AuthContextServiceTestCase extends MockitoSugar {
@@ -368,8 +428,9 @@ trait AuthContextServiceTestCase extends MockitoSugar {
       accounts = accounts,
       loggedInAt = loggedInAt,
       previouslyLoggedInAt = previouslyLoggedInAt,
-      CredentialStrength.Strong,
-      confidenceLevel = L500
+      credentialStrength = CredentialStrength.Strong,
+      confidenceLevel = ConfidenceLevel.L500
     )
   }
+
 }

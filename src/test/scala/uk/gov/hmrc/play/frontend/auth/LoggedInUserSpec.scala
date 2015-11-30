@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.play.frontend.auth
 
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel._
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.ConfidenceLevel
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.CredentialStrength
 import uk.gov.hmrc.play.test.UnitSpec
 
 class LoggedInUserSpec extends OidConversionSpec[LoggedInUser] with UnitSpec {
@@ -26,7 +27,12 @@ class LoggedInUserSpec extends OidConversionSpec[LoggedInUser] with UnitSpec {
   }
 
   override protected def constructWithUserId(userId: String) = LoggedInUser(
-    userId = userId, loggedInAt = None, previouslyLoggedInAt = None, governmentGatewayToken = None, confidenceLevel = L500
+    userId = userId,
+    loggedInAt = None,
+    previouslyLoggedInAt = None,
+    governmentGatewayToken = None,
+    credentialStrength = CredentialStrength.Strong,
+    confidenceLevel = ConfidenceLevel.L500
   )
 
   override protected def oid(user: LoggedInUser): String = user.oid

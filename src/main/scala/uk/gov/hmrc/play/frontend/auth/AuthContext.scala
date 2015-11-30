@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.frontend.auth
 
 import org.joda.time.DateTime
-import uk.gov.hmrc.play.frontend.auth.connectors.domain.{Accounts, Authority, ConfidenceLevel}
+import uk.gov.hmrc.play.frontend.auth.connectors.domain.{CredentialStrength, Accounts, Authority, ConfidenceLevel}
 
 case class AuthContext(user: LoggedInUser, principal: Principal, attorney: Option[Attorney]) {
   lazy val isDelegating: Boolean = attorney.isDefined
@@ -40,6 +40,7 @@ object AuthContext {
         loggedInAt = authority.loggedInAt,
         previouslyLoggedInAt = authority.previouslyLoggedInAt,
         governmentGatewayToken = governmentGatewayToken,
+        credentialStrength = authority.credentialStrength,
         confidenceLevel = authority.confidenceLevel
       ),
       principal = Principal(
@@ -54,6 +55,7 @@ object AuthContext {
 case class LoggedInUser(userId: String,loggedInAt: Option[DateTime],
                         previouslyLoggedInAt: Option[DateTime],
                         governmentGatewayToken: Option[String],
+                        credentialStrength: CredentialStrength,
                         confidenceLevel: ConfidenceLevel) {
   lazy val oid: String = OidExtractor.userIdToOid(userId)
 }
