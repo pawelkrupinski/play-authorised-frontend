@@ -18,16 +18,16 @@ package uk.gov.hmrc.play.frontend.auth
 
 import org.joda.time.{DateTime, DateTimeZone, Duration}
 import play.api.Logger
-import play.api.mvc._
 import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.time.DateTimeUtils
+import play.api.mvc._
 
 import scala.concurrent._
 
-trait SessionTimeoutWrapper  {
+trait SessionTimeoutWrapper {
 
-  def now : () => DateTime = () => DateTimeUtils.now
+  def now: () => DateTime = () => DateTimeUtils.now
 
   object WithSessionTimeoutValidation extends WithSessionTimeoutValidation(now)
 
@@ -36,8 +36,8 @@ trait SessionTimeoutWrapper  {
 }
 
 /**
- * This is a duplicate of the same class in play-frontend; if making changes here, do the same there - sorry
- */
+  * This is a duplicate of the same class in play-frontend; if making changes here, do the same there - sorry
+  */
 object AuthorisedSessionTimeoutWrapper {
   val timeoutSeconds = 900
 
@@ -63,19 +63,25 @@ class WithSessionTimeoutValidation(val now: () => DateTime) extends SessionTimeo
 
   def apply(authenticationProvider: AuthenticationProvider)(action: Action[AnyContent]): Action[AnyContent] = Action.async {
     implicit request: Request[AnyContent] => {
-      implicit val loggingDetails = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
+      implicit val loggingDetails = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+
+      def preserveSession(timeoutRequest: Result): Seq[(String, String)] = for {
+        key <- authenticationProvider.sessionKeysToKeep
+        value <- timeoutRequest.session.get(key)
+      } yield key -> value
+
       val result = if (AuthorisedSessionTimeoutWrapper.userNeedsNewSession(request.session, now)) {
         Logger.info(s"request refused as the session had timed out in ${request.path}")
-        authenticationProvider.handleSessionTimeout.flatMap {
-          result =>
-            Action(result)(request).map(_.withNewSession)
-        }
-      } else {
-        action(request)
-      }
-      addTimestamp(request, result)
-    }
+        for {
+          result <- authenticationProvider.handleSessionTimeout
+          timeoutRequest <- Action(result)(request)
+          consumeSessionKeys = preserveSession(timeoutRequest)
+      } yield timeoutRequest.withSession(consumeSessionKeys: _*)
+    } else
+      action(request)
+    addTimestamp(request, result)
   }
+}
 
 }
 
@@ -95,7 +101,7 @@ trait SessionTimeout {
   val now: () => DateTime
 
   protected def addTimestamp(request: Request[AnyContent], result: Future[Result]): Future[Result] = {
-    implicit val headerCarrier = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
+    implicit val headerCarrier = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
     result.map(insertTimestampNow(request))
   }
 
