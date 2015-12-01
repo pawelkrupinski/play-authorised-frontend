@@ -37,6 +37,8 @@ trait AuthenticationProvider {
 
   def id: String
 
+  def sessionKeysToKeep : Seq[String] = Seq.empty
+
   def redirectToLogin(implicit request: Request[_]): Future[Result]
 
   def handleSessionTimeout(implicit request: Request[_]): Future[Result] = redirectToLogin
@@ -70,6 +72,8 @@ trait Verify extends AuthenticationProvider {
 
   override val id = AuthenticationProviderIds.VerifyProviderId
 
+  override def sessionKeysToKeep : Seq[String] = Seq(SessionKeys.loginOrigin, SessionKeys.redirect)
+
   def login: String
 
   def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
@@ -84,6 +88,8 @@ trait Verify extends AuthenticationProvider {
 trait AnyAuthenticationProvider extends AuthenticationProvider {
 
   val id = AuthenticationProviderIds.AnyAuthenticationProviderId
+
+  override def sessionKeysToKeep : Seq[String] = Seq(SessionKeys.loginOrigin, SessionKeys.redirect)
 
   def ggwAuthenticationProvider: GovernmentGateway
   def verifyAuthenticationProvider: Verify

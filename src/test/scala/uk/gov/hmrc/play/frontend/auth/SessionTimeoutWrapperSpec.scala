@@ -19,12 +19,15 @@ package uk.gov.hmrc.play.frontend.auth
 import java.util.UUID
 
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.mvc.{Action, Controller, Cookie, Session}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.play.frontend.auth.AuthorisedSessionTimeoutWrapper._
 import uk.gov.hmrc.play.http.SessionKeys
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
+import play.api.mvc.Results._
+import play.api.mvc._
+
+import scala.concurrent.Future
 
 class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
 
@@ -38,9 +41,21 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
   val now: () => DateTime = () => hypotheticalCurrentTime
 
   object AnyAuthenticationProviderForTest extends AnyAuthenticationProvider {
+
     override def login: String = accountLoginPage
     override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway { override def login: String = accountLoginPage }
     override def verifyAuthenticationProvider: Verify = new Verify { override def login: String = accountLoginPage }
+  }
+
+  object AuthenticationTestProviderWithSessionUpdate extends Verify {
+
+    override def login: String = accountLoginPage
+
+    override val id = "Test"
+
+    override def redirectToLogin(implicit request: Request[_]) = {
+      Future.successful(Redirect(accountLoginPage).withSession("MUST_NOT_BE_CONSUMED" -> "NOT_FOUND", SessionKeys.loginOrigin -> "Origin", SessionKeys.redirect -> "Redirect"))
+    }
   }
 
   object TestController extends Controller with SessionTimeoutWrapper {
@@ -67,6 +82,13 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
       request =>
         Ok("").withSession(SessionKeys.userId -> "Tim")
     })
+
+
+    def testWithSessionTimeoutValidationAndSessionStorage = WithSessionTimeoutValidation(AuthenticationTestProviderWithSessionUpdate)(Action {
+      request =>
+        Ok("").withSession(SessionKeys.userId -> "Tim")
+    })
+
   }
 
 
@@ -97,6 +119,14 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
   }
 
   "WithSessionTimeoutValidation" should {
+
+    "redirect to the login page with a new session and do not remove the Verify session keys" in  {
+      val result = TestController.testWithSessionTimeoutValidationAndSessionStorage(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> invalidTime))
+      session(result) shouldBe Session(Map(SessionKeys.loginOrigin -> "Origin", SessionKeys.redirect -> "Redirect", SessionKeys.lastRequestTimestamp -> now().getMillis.toString))
+      redirectLocation(result) shouldBe Some(accountLoginPage)
+    }
+
+
     "redirect to the login page with a new session containing only a timestamp if the incoming timestamp is invalid" in  {
       val result = TestController.testWithSessionTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> invalidTime))
       session(result) shouldBe Session(Map(SessionKeys.lastRequestTimestamp -> now().getMillis.toString))
