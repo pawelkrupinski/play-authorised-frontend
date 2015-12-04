@@ -27,13 +27,11 @@ private object AppDependencies {
   import play.PlayImport._
   import play.core.PlayVersion
 
-  val httpVerbsVersion = "3.0.0"
-
   val compile = Seq(
     "com.typesafe.play" %% "play" % PlayVersion.current % "provided",
     json % "provided",
     ws % "provided",
-    "uk.gov.hmrc" %% "http-verbs" % httpVerbsVersion,
+    "uk.gov.hmrc" %% "http-verbs" % "3.3.0",
     "uk.gov.hmrc" %% "domain" % "3.1.0"
   )
 
