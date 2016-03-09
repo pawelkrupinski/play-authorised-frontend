@@ -200,7 +200,8 @@ case class Accounts(paye: Option[PayeAccount] = None,
                     org: Option[OrgAccount] = None,
                     ated: Option[AtedAccount] = None,
                     awrs: Option[AwrsAccount] = None,
-                    gmp: Option[GmpAccount] = None,
+                    psa: Option[PsaAccount] = None,
+                    psp: Option[PspAccount] = None,
                     iht: Option[IhtAccount] = None) {
   def toMap = Map() ++
     sa.map("saUtr" -> _.utr.utr).toMap ++
@@ -213,7 +214,8 @@ case class Accounts(paye: Option[PayeAccount] = None,
     agent.map("agentCode" -> _.agentCode).toMap ++
     ated.map("atedUtr" -> _.utr.utr).toMap ++
     awrs.map("awrsUtr" -> _.utr.utr).toMap ++
-    gmp.map("psaId" -> _.id.id).toMap ++
+    psa.map("psaId" -> _.id.id).toMap ++
+    psp.map("pspId" -> _.id.id).toMap ++
     taxsAgent.map("uar" -> _.uar.uar).toMap ++
     iht.map("iht" -> _.nino.nino).toMap
 }
@@ -233,7 +235,8 @@ object Accounts {
     implicit val orgFormat = Json.format[OrgAccount]
     implicit val agentFormat = Json.format[AgentAccount]
     implicit val eiFormat = Json.format[EIAccount]
-    implicit val gmpFormat = Json.format[GmpAccount]
+    implicit val psaFormat = Json.format[PsaAccount]
+    implicit val pspFormat = Json.format[PspAccount]
     implicit val atedFormat = Json.format[AtedAccount]
     implicit val awrsFormat = Json.format[AwrsAccount]
     Json.format[Accounts]
@@ -264,7 +267,9 @@ case class AtedAccount(link: String, utr: AtedUtr) extends Account
 
 case class AwrsAccount(link: String, utr: AwrsUtr) extends Account
 
-case class GmpAccount(link: String, id: PsaId) extends Account
+case class PsaAccount(link: String, id: PsaId) extends Account
+
+case class PspAccount(link: String, id: PspId) extends Account
 
 case class IhtAccount(link: String, nino: Nino) extends Account
 
