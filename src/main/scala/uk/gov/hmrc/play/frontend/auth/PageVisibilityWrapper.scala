@@ -84,7 +84,7 @@ private[auth] object WithPageVisibility {
           if (visible.isVisible)
             action(authContext)(request)
           else
-            Action.async(visible.nonVisibleResult)(request)
+            visible.nonVisibleResult
         }
     }
 }
