@@ -29,7 +29,6 @@ import scala.util.Right
 
 class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with IntegrationPatience with WithFakeApplication {
 
-
   val ggLogin = "/gg"
   val verifyLogin = "/verify"
   val anyLogin = "/any"
@@ -42,7 +41,14 @@ class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with Integra
 
       for {
         result <- handleNotAuthenticated(userCredentials).futureValue.right
-      } yield redirectLocation(result) should be (Some(ggLogin))
+      } yield {
+        val location = redirectLocation(result)
+        location shouldBe defined
+        val fakeRequest = FakeRequest("GET", location.get)
+        fakeRequest.path shouldBe ggLogin
+        fakeRequest.getQueryString("origin") shouldBe Some("xyz")
+        fakeRequest.getQueryString("continue") shouldBe Some("/calling-service?foo=bar&bar=foo")
+      }
     }
 
     "return redirection to ggLogin for GGW authProvider and no user in the session" in new AnyAuthProviderTestCase(authProviderInSession = Some("GGW")) {
@@ -51,7 +57,14 @@ class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with Integra
 
       for {
         result <- handleNotAuthenticated(userCredentials).futureValue.right
-      } yield redirectLocation(result) should be (Some(ggLogin))
+      } yield {
+        val location = redirectLocation(result)
+        location shouldBe defined
+        val fakeRequest = FakeRequest("GET", location.get)
+        fakeRequest.path shouldBe ggLogin
+        fakeRequest.getQueryString("origin") shouldBe Some("xyz")
+        fakeRequest.getQueryString("continue") shouldBe Some("/calling-service?foo=bar&bar=foo")
+      }
     }
 
     "not handle authenticated user for GGW authProvider" in new AnyAuthProviderTestCase(authProviderInSession = Some("GGW")) {
@@ -108,7 +121,9 @@ class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with Integra
   class AnyAuthenticationProviderForTest extends AnyAuthenticationProvider {
 
     override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway {
-      override def login: String = ggLogin
+      override def origin: String = "xyz"
+      override def continueURL: String = "/calling-service?foo=bar&bar=foo"
+      override def loginURL: String = ggLogin
     }
     override def verifyAuthenticationProvider: Verify = new Verify {
       override def login: String = verifyLogin
@@ -119,7 +134,9 @@ class AuthenticationProviderSpec extends UnitSpec with ScalaFutures with Integra
   class AnyAuthenticationProviderForTestNoRedirect extends AnyAuthenticationProviderForTest {
 
     override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway {
-      override def login: String = throw new IllegalStateException("Should be no redirect to login")
+      override def origin: String = "xyz"
+      override def continueURL: String = "/calling-service"
+      override def loginURL: String = ggLogin
       override def redirectToLogin(implicit request: Request[_]) = Future.successful(Unauthorized)
     }
 

@@ -21,8 +21,10 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext.fromLoggingDetails
-
 import scala.concurrent._
+import play.api.Play
+import play.api.Play.current
+
 
 case class UserCredentials(userId: Option[String], token: Option[String])
 
@@ -54,9 +56,21 @@ trait GovernmentGateway extends AuthenticationProvider {
 
   override val id = AuthenticationProviderIds.GovernmentGatewayId
 
-  def login: String
-
-  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
+  final lazy val defaultOrigin: String = {
+    Play.configuration.getString("sosOrigin")
+      .orElse(Play.configuration.getString("appName"))
+      .getOrElse("undefined")
+  }
+  
+  def origin: String = defaultOrigin
+  
+  def continueURL: String
+  
+  def loginURL: String
+  
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(
+    Redirect(loginURL, Map("continue" -> Seq(continueURL), "origin" -> Seq(origin)))
+  )
 
   def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, token@_) =>
