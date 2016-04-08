@@ -67,6 +67,18 @@ To help migrating, the mapping from `User` to `AuthContext` fields are as follow
 `User.actingAsAttorneyFor` - this is deprecated and has been removed in favour of the principal/attorney fields.
 
 
+###Service Origin for Metrics for Securing Our Services
+
+The `GovernmentGateway` trait allows to set a `origin` property which will be used by analytics tools to
+track the entire login journey.
+
+By default this is the name of the application (`appName` from `application.conf`). You can set a value
+that is different from the application name globally in `application.conf` with the `sosOrigin` property.
+
+If you need to dynamically set the value per request, you need to override the `origin` property in
+the `GovernmentGateway` trait. 
+
+
 ###Controller
 
 If you have a service that initiates the delegation flow, where a logged in user starts acting on behalf of another user, then you need to provide a controller extending `uk.gov.hmrc.play.frontend.auth.Delegator`.

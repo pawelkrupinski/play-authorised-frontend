@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 HM Revenue & Customs
+ * Copyright 2016 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext.fromLoggingDetails
-
 import scala.concurrent._
+import play.api.Play
+import play.api.Play.current
+
 
 case class UserCredentials(userId: Option[String], token: Option[String])
 
@@ -54,9 +56,24 @@ trait GovernmentGateway extends AuthenticationProvider {
 
   override val id = AuthenticationProviderIds.GovernmentGatewayId
 
-  def login: String
+  final lazy val defaultOrigin: String = {
+    Play.configuration.getString("sosOrigin")
+      .orElse(Play.configuration.getString("appName"))
+      .getOrElse("undefined")
+  }
+  
+  def origin: String = defaultOrigin
+  
+  def continueURL: String
+  
+  def loginURL: String
 
-  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(login))
+  def additionalLoginParameters: Map[String, Seq[String]] = Map.empty
+
+  private def loginUrlParameters = Map("continue" -> Seq(continueURL), "origin" -> Seq(origin)) ++ additionalLoginParameters
+
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(loginURL, loginUrlParameters))
+
 
   def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, token@_) =>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 HM Revenue & Customs
+ * Copyright 2016 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,12 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
   object AnyAuthenticationProviderForTest extends AnyAuthenticationProvider {
 
     override def login: String = accountLoginPage
-    override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway { override def login: String = accountLoginPage }
-    override def verifyAuthenticationProvider: Verify = new Verify { override def login: String = accountLoginPage }
+    override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway { 
+      override def origin: String = "xyz"
+      override def continueURL: String = "/calling-service"
+      override def loginURL: String = accountLoginPage + "/gg"
+    }
+    override def verifyAuthenticationProvider: Verify = new Verify { override def login: String = accountLoginPage + "/verify" }
   }
 
   object AuthenticationTestProviderWithSessionUpdate extends Verify {
