@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 HM Revenue & Customs
+ * Copyright 2016 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,10 +67,13 @@ trait GovernmentGateway extends AuthenticationProvider {
   def continueURL: String
   
   def loginURL: String
-  
-  def redirectToLogin(implicit request: Request[_]) = Future.successful(
-    Redirect(loginURL, Map("continue" -> Seq(continueURL), "origin" -> Seq(origin)))
-  )
+
+  def additionalLoginParameters: Map[String, Seq[String]] = Map.empty
+
+  private def loginUrlParameters = Map("continue" -> Seq(continueURL), "origin" -> Seq(origin)) ++ additionalLoginParameters
+
+  def redirectToLogin(implicit request: Request[_]) = Future.successful(Redirect(loginURL, loginUrlParameters))
+
 
   def handleNotAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, FailureResult]]] = {
     case UserCredentials(None, token@_) =>
