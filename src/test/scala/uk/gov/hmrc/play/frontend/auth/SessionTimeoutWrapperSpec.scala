@@ -21,7 +21,6 @@ import java.util.UUID
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.play.frontend.auth.AuthorisedSessionTimeoutWrapper._
 import uk.gov.hmrc.play.http.SessionKeys
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 import play.api.mvc.Results._
@@ -34,6 +33,7 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
   lazy val accountLoginPage = "/account"
   val hypotheticalCurrentTime = new DateTime(2012, 7, 7, 4, 6, 20, DateTimeZone.UTC)
   val invalidTime = hypotheticalCurrentTime.minusDays(1).getMillis.toString
+  private val timeoutSeconds = 900
   val justInvalidTime = hypotheticalCurrentTime.minusSeconds(timeoutSeconds + 1).getMillis.toString
   val justValidTime = hypotheticalCurrentTime.minusSeconds(timeoutSeconds - 1).getMillis.toString
   val validTime = hypotheticalCurrentTime.minusSeconds(1).getMillis.toString
