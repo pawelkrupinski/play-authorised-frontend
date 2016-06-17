@@ -54,6 +54,10 @@ trait AuthenticationProvider {
 
   implicit def hc(implicit request: Request[_]) = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
 
+  final def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
+    extractTimestamp(session).fold(false)(hasExpired(now))
+  }
+
   private def extractTimestamp(session: Session): Option[DateTime] = {
     try {
       session.get(SessionKeys.lastRequestTimestamp) map (t => new DateTime(t.toLong, DateTimeZone.UTC))
@@ -62,11 +66,7 @@ trait AuthenticationProvider {
     }
   }
 
-  final def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
-    extractTimestamp(session).fold(false)(hasExpired(now))
-  }
-
-  final private def timeoutSeconds : Int = {
+  private def timeoutSeconds : Int = {
     if (defaultTimeoutSeconds < 300 || defaultTimeoutSeconds > 1800) throw new IllegalArgumentException("session timeout must be between 300 and 1800 seconds")
     defaultTimeoutSeconds
   }
