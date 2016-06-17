@@ -17,15 +17,14 @@
 package uk.gov.hmrc.play.frontend.auth
 
 import org.joda.time.{DateTime, DateTimeZone, Duration}
-import play.api.Logger
+import play.api.{Logger, Play}
+import play.api.Play.current
 import play.api.mvc.Results._
 import play.api.mvc._
-import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext.fromLoggingDetails
+import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 
 import scala.concurrent._
-import play.api.Play
-import play.api.Play.current
 
 
 case class UserCredentials(userId: Option[String], token: Option[String])
@@ -37,7 +36,7 @@ object AuthenticationProviderIds {
 }
 
 trait AuthenticationProvider {
-  val timeoutSeconds = 900
+  def defaultTimeoutSeconds: Int = 900
 
   type FailureResult = Result
 
@@ -46,10 +45,6 @@ trait AuthenticationProvider {
   def sessionKeysToKeep : Seq[String] = Seq.empty
 
   def redirectToLogin(implicit request: Request[_]): Future[Result]
-
-  def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
-    extractTimestamp(session).fold(false)(hasExpired(now))
-  }
 
   def handleSessionTimeout(implicit request: Request[_]): Future[Result] = redirectToLogin
 
@@ -65,6 +60,15 @@ trait AuthenticationProvider {
     } catch {
       case e: NumberFormatException => None
     }
+  }
+
+  final def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
+    extractTimestamp(session).fold(false)(hasExpired(now))
+  }
+
+  final private def timeoutSeconds : Int = {
+    if (defaultTimeoutSeconds < 300 || defaultTimeoutSeconds > 1800) throw new IllegalArgumentException("session timeout must be between 300 and 1800 seconds")
+    defaultTimeoutSeconds
   }
 
   private def hasExpired(now: () => DateTime)(timestamp: DateTime): Boolean = {

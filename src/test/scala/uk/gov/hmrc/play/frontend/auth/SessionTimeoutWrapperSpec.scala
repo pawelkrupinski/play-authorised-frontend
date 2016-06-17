@@ -40,7 +40,7 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
 
   val now: () => DateTime = () => hypotheticalCurrentTime
 
-  object AnyAuthenticationProviderForTest extends AnyAuthenticationProvider {
+  trait AnyAuthenticationProviderForTest extends AnyAuthenticationProvider {
 
     override def login: String = accountLoginPage
     override def ggwAuthenticationProvider: GovernmentGateway = new GovernmentGateway { 
@@ -49,6 +49,24 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
       override def loginURL: String = accountLoginPage + "/gg"
     }
     override def verifyAuthenticationProvider: Verify = new Verify { override def login: String = accountLoginPage + "/verify" }
+  }
+
+  object AnyAuthenticationProviderForTest extends AnyAuthenticationProviderForTest
+
+  object TooSmallAnyAuthenticationProviderForTest extends AnyAuthenticationProviderForTest {
+    override def defaultTimeoutSeconds = 299
+  }
+
+  object TooBigAnyAuthenticationProviderForTest extends AnyAuthenticationProviderForTest {
+    override def defaultTimeoutSeconds = 1801
+  }
+
+  object SlightlyLongerAnyAuthenticationProviderForTest extends AnyAuthenticationProviderForTest {
+    override def defaultTimeoutSeconds = 1000
+  }
+
+  object SlightlyShorterAnyAuthenticationProviderForTest extends AnyAuthenticationProviderForTest {
+    override def defaultTimeoutSeconds = 898
   }
 
   object AuthenticationTestProviderWithSessionUpdate extends Verify {
@@ -87,6 +105,25 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
         Ok("").withSession(SessionKeys.userId -> "Tim")
     })
 
+    def testWithSessionTooSmallTimeoutValidation = WithSessionTimeoutValidation(TooSmallAnyAuthenticationProviderForTest)(Action {
+      request =>
+        Ok("").withSession(SessionKeys.userId -> "Tim")
+    })
+
+    def testWithSessionTooBigTimeoutValidation = WithSessionTimeoutValidation(TooSmallAnyAuthenticationProviderForTest)(Action {
+      request =>
+        Ok("").withSession(SessionKeys.userId -> "Tim")
+    })
+
+    def testWithSessionSlightlyLongerTimeoutValidation = WithSessionTimeoutValidation(SlightlyLongerAnyAuthenticationProviderForTest)(Action {
+      request =>
+        Ok("").withSession(SessionKeys.userId -> "Tim")
+    })
+
+    def testWithSessionSlightlyShorterTimeoutValidation = WithSessionTimeoutValidation(SlightlyShorterAnyAuthenticationProviderForTest)(Action {
+      request =>
+        Ok("").withSession(SessionKeys.userId -> "Tim")
+    })
 
     def testWithSessionTimeoutValidationAndSessionStorage = WithSessionTimeoutValidation(AuthenticationTestProviderWithSessionUpdate)(Action {
       request =>
@@ -124,12 +161,37 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
 
   "WithSessionTimeoutValidation" should {
 
+    "not accept session timeout values that are too small" in {
+      val error = intercept[IllegalArgumentException] {
+        TestController.testWithSessionTooSmallTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> justValidTime))
+        fail("should not get here")
+      }
+    }
+
+    "not accept session timeout values that are too big" in {
+      val error = intercept[IllegalArgumentException] {
+        TestController.testWithSessionTooBigTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> justValidTime))
+        fail("should not get here")
+      }
+    }
+
+    "perform the wrapped action successfully and update the timestamp if the incoming timestamp is normally invalid (too long) only if the defauly is overriden" in  {
+      val result = TestController.testWithSessionSlightlyLongerTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> justInvalidTime))
+      session(result) shouldBe Session(Map(SessionKeys.lastRequestTimestamp -> now().getMillis.toString, SessionKeys.userId -> "Tim"))
+      status(result) shouldBe 200
+    }
+
     "redirect to the login page with a new session and do not remove the Verify session keys" in  {
       val result = TestController.testWithSessionTimeoutValidationAndSessionStorage(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> invalidTime))
       session(result) shouldBe Session(Map(SessionKeys.loginOrigin -> "Origin", SessionKeys.redirect -> "Redirect", SessionKeys.lastRequestTimestamp -> now().getMillis.toString))
       redirectLocation(result) shouldBe Some(accountLoginPage)
     }
 
+    "redirect to the login page with a new session containing only a timestamp if the incoming timestamp is invalid due to overridden shorter session timeout" in  {
+      val result = TestController.testWithSessionSlightlyShorterTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> justValidTime))
+      session(result) shouldBe Session(Map(SessionKeys.lastRequestTimestamp -> now().getMillis.toString))
+      redirectLocation(result) shouldBe Some(accountLoginPage)
+    }
 
     "redirect to the login page with a new session containing only a timestamp if the incoming timestamp is invalid" in  {
       val result = TestController.testWithSessionTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> invalidTime))
@@ -160,6 +222,7 @@ class SessionTimeoutWrapperSpec extends UnitSpec with WithFakeApplication {
       session(result) shouldBe Session(Map(SessionKeys.lastRequestTimestamp -> now().getMillis.toString, SessionKeys.userId -> "Tim"))
       status(result) shouldBe 200
     }
+
     "perform the wrapped action successfully and update the timestamp if the incoming timestamp is valid" in  {
       val result = TestController.testWithSessionTimeoutValidation(FakeRequest().withSession(SessionKeys.lastRequestTimestamp -> validTime))
       session(result) shouldBe Session(Map(SessionKeys.lastRequestTimestamp -> now().getMillis.toString, SessionKeys.userId -> "Tim"))
