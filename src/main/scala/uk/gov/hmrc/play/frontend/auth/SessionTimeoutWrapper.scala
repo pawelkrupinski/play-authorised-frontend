@@ -35,30 +35,6 @@ trait SessionTimeoutWrapper {
 
 }
 
-/**
-  * This is a duplicate of the same class in play-frontend; if making changes here, do the same there - sorry
-  */
-object AuthorisedSessionTimeoutWrapper {
-  val timeoutSeconds = 900
-
-  def userNeedsNewSession(session: Session, now: () => DateTime): Boolean =
-    extractTimestamp(session).fold(false)(hasExpired(now))
-
-  private def hasExpired(now: () => DateTime)(timestamp: DateTime): Boolean = {
-    val timeOfExpiry = timestamp plus Duration.standardSeconds(timeoutSeconds)
-    now() isAfter timeOfExpiry
-  }
-
-  private def extractTimestamp(session: Session): Option[DateTime] = {
-    try {
-      session.get(SessionKeys.lastRequestTimestamp) map (t => new DateTime(t.toLong, DateTimeZone.UTC))
-    } catch {
-      case e: NumberFormatException => None
-    }
-  }
-}
-
-
 class WithSessionTimeoutValidation(val now: () => DateTime) extends SessionTimeout {
 
   def apply(authenticationProvider: AuthenticationProvider)(action: Action[AnyContent]): Action[AnyContent] = Action.async {
@@ -70,7 +46,7 @@ class WithSessionTimeoutValidation(val now: () => DateTime) extends SessionTimeo
         value <- timeoutRequest.session.get(key)
       } yield key -> value
 
-      val result = if (AuthorisedSessionTimeoutWrapper.userNeedsNewSession(request.session, now)) {
+      val result = if (authenticationProvider.userNeedsNewSession(request.session, now)) {
         Logger.info(s"request refused as the session had timed out in ${request.path}")
         for {
           result <- authenticationProvider.handleSessionTimeout

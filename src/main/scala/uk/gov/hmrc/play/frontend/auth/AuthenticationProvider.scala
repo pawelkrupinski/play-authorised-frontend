@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.play.frontend.auth
 
-import play.api.Logger
+import org.joda.time.{DateTime, DateTimeZone, Duration}
+import play.api.{Logger, Play}
+import play.api.Play.current
 import play.api.mvc.Results._
 import play.api.mvc._
-import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext.fromLoggingDetails
+import uk.gov.hmrc.play.http.{HeaderCarrier, SessionKeys}
+
 import scala.concurrent._
-import play.api.Play
-import play.api.Play.current
 
 
 case class UserCredentials(userId: Option[String], token: Option[String])
@@ -35,6 +36,8 @@ object AuthenticationProviderIds {
 }
 
 trait AuthenticationProvider {
+  def defaultTimeoutSeconds: Int = 900
+
   type FailureResult = Result
 
   def id: String
@@ -50,6 +53,28 @@ trait AuthenticationProvider {
   def handleAuthenticated(implicit request: Request[_]): PartialFunction[UserCredentials, Future[Either[AuthContext, Result]]] = PartialFunction.empty
 
   implicit def hc(implicit request: Request[_]) = HeaderCarrier.fromHeadersAndSession(request.headers,Some(request.session) )
+
+  final def userNeedsNewSession(session: Session, now: () => DateTime): Boolean = {
+    extractTimestamp(session).fold(false)(hasExpired(now))
+  }
+
+  private def extractTimestamp(session: Session): Option[DateTime] = {
+    try {
+      session.get(SessionKeys.lastRequestTimestamp) map (t => new DateTime(t.toLong, DateTimeZone.UTC))
+    } catch {
+      case e: NumberFormatException => None
+    }
+  }
+
+  private def timeoutSeconds : Int = {
+    if (defaultTimeoutSeconds < 300 || defaultTimeoutSeconds > 1800) throw new IllegalArgumentException("session timeout must be between 300 and 1800 seconds")
+    defaultTimeoutSeconds
+  }
+
+  private def hasExpired(now: () => DateTime)(timestamp: DateTime): Boolean = {
+    val timeOfExpiry = timestamp plus Duration.standardSeconds(timeoutSeconds)
+    now() isAfter timeOfExpiry
+  }
 }
 
 trait GovernmentGateway extends AuthenticationProvider {
