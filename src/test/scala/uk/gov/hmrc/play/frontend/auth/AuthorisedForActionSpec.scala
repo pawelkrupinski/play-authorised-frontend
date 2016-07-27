@@ -80,7 +80,10 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
       None,
       None,
       CredentialStrength.Weak,
-      ConfidenceLevel.L100)
+      ConfidenceLevel.L100,
+      userDetailsLink = Some("/user-details/1234567890"),
+      enrolments = Some("/auth/oid/1234567890/enrolments")
+    )
   }
 
   def requestFromLoggedInUser: FakeRequest[AnyContentAsEmpty.type] = {
@@ -98,7 +101,10 @@ class AuthorisedForActionSpec extends UnitSpec with BeforeAndAfterEachTestData w
       None,
       None,
       CredentialStrength.Strong,
-      ConfidenceLevel.L500)
+      ConfidenceLevel.L500,
+      userDetailsLink = Some("/user-details/1234567890"),
+      enrolments = Some("/auth/oid/1234567890/enrolments")
+    )
 }
 
 sealed class TestController

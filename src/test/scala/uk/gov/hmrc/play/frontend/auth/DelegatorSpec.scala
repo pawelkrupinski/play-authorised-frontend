@@ -44,7 +44,9 @@ class DelegatorSpec extends UnitSpec with WithFakeApplication with Results {
         agentBusinessUtr = None
       )))
     ),
-    attorney = None
+    attorney = None,
+    userDetailsUri = Some("/user-details/1234567890"),
+    enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
   )
 
   implicit val hc = new HeaderCarrier()

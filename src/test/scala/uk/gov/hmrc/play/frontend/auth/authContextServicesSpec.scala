@@ -93,7 +93,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(delegationData.principalName), delegationData.accounts),
-          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
+          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link)),
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -120,7 +122,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(delegationData.principalName), delegationData.accounts),
-          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link))
+          attorney = Some(Attorney(delegationData.attorneyName, delegationData.link)),
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -152,7 +156,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(session.name), userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -179,7 +185,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(session.name), userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -206,7 +214,9 @@ class AuthContextServiceWithDelegationEnabledSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(None, userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
   }
@@ -314,7 +324,9 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(session.name), userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -341,7 +353,9 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(Some(session.name), userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
 
@@ -368,7 +382,9 @@ class AuthContextServiceDisallowingDelegationSpec extends UnitSpec with MockitoS
             CredentialStrength.Strong,
             ConfidenceLevel.L500),
           principal = Principal(None, userAtKeyboard.accounts),
-          attorney = None
+          attorney = None,
+          userDetailsUri = Some("/user-details/1234567890"),
+          enrolmentsUri = Some("/auth/oid/1234567890/enrolments")
         ))
     }
   }
@@ -429,7 +445,9 @@ trait AuthContextServiceTestCase extends MockitoSugar {
       loggedInAt = loggedInAt,
       previouslyLoggedInAt = previouslyLoggedInAt,
       credentialStrength = CredentialStrength.Strong,
-      confidenceLevel = ConfidenceLevel.L500
+      confidenceLevel = ConfidenceLevel.L500,
+      userDetailsLink = Some("/user-details/1234567890"),
+      enrolments = Some("/auth/oid/1234567890/enrolments")
     )
   }
 

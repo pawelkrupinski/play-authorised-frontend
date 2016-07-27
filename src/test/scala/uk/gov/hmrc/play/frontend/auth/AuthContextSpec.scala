@@ -47,7 +47,9 @@ class AuthContextSpec extends UnitSpec {
       loggedInAt = loggedInAt,
       previouslyLoggedInAt = previouslyLoggedInAt,
       credentialStrength = CredentialStrength.Strong,
-      confidenceLevel = ConfidenceLevel.L500
+      confidenceLevel = ConfidenceLevel.L500,
+      userDetailsLink = Some("/user-details/1234567890"),
+      enrolments = Some("/auth/oid/1234567890/enrolments")
     )
   }
 
@@ -77,7 +79,7 @@ class AuthContextSpec extends UnitSpec {
       accounts = AuthData.accounts
     )
 
-    val expectedAuthContext = AuthContext(expectedLoggedInUser, principal, None)
+    val expectedAuthContext = AuthContext(expectedLoggedInUser, principal, None, Some("/user-details/1234567890"), Some("/auth/oid/1234567890/enrolments"))
   }
 
   object ExpectationsWhenDelegating {
@@ -89,7 +91,7 @@ class AuthContextSpec extends UnitSpec {
 
     val attorney = Attorney(DelegationServiceData.attorneyName, DelegationServiceData.returnLink)
 
-    val expectedAuthContext = AuthContext(expectedLoggedInUser, principal, Some(attorney))
+    val expectedAuthContext = AuthContext(expectedLoggedInUser, principal, Some(attorney), Some("/user-details/1234567890"), Some("/auth/oid/1234567890/enrolments"))
   }
 
   "The AuthContext apply method" should {
@@ -115,11 +117,11 @@ class AuthContextSpec extends UnitSpec {
     val principal = Principal(Some("Bob P"), Accounts())
 
     "be true if the attorney is defined" in {
-      AuthContext(loggedInUser, principal, Some(Attorney("Dave A", Link("A", "A")))).isDelegating shouldBe true
+      AuthContext(loggedInUser, principal, Some(Attorney("Dave A", Link("A", "A"))), Some("/user-details/1234567890"), Some("/auth/oid/1234567890/enrolments")).isDelegating shouldBe true
     }
 
     "be false if the attorney is None" in {
-      AuthContext(loggedInUser, principal, None).isDelegating shouldBe false
+      AuthContext(loggedInUser, principal, None, Some("/user-details/1234567890"), Some("/auth/oid/1234567890/enrolments")).isDelegating shouldBe false
     }
   }
 }

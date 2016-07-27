@@ -96,7 +96,7 @@ object CredentialStrength {
         try {
           JsSuccess(fromName(json.as[String]))
         } catch {
-          case (_) => JsError()
+          case _ : Throwable => JsError()
         }
     }
     val writes = new Writes[CredentialStrength] {
@@ -112,7 +112,9 @@ case class Authority(uri: String,
                      loggedInAt: Option[DateTime],
                      previouslyLoggedInAt: Option[DateTime],
                      credentialStrength: CredentialStrength,
-                     confidenceLevel: ConfidenceLevel)
+                     confidenceLevel: ConfidenceLevel,
+                     userDetailsLink: Option[String],
+                     enrolments: Option[String])
 
 object Authority {
   implicit val format = {
