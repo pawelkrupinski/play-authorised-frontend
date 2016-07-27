@@ -24,14 +24,17 @@ class AuthoritySpec extends UnitSpec with WithFakeApplication {
 
   "Authority" should {
 
-    "round trip correctly to and from JSON" in {
+    "round trip correctly to and from JSON when links are present" in {
 
       val authority = Authority("/auth/some-oid",
         Accounts(paye = Some(PayeAccount("/paye/AA000002B", Nino("AA000002B"))), iht = Some(IhtAccount("/iht/AA000002B", Nino("AA000002B")))),
         None,
         None,
         CredentialStrength.Strong,
-        ConfidenceLevel.L500)
+        ConfidenceLevel.L500,
+        Some("/user-details/1234567890"),
+        Some("/auth/oid/1234567890/enrolments")
+      )
 
       val jsonString = Json.toJson(authority).toString()
 
@@ -39,6 +42,34 @@ class AuthoritySpec extends UnitSpec with WithFakeApplication {
       jsonString should include (""""iht":{"link":"/iht/AA000002B","nino":"AA000002B"}""")
       jsonString should include (""""credentialStrength":"strong"""")
       jsonString should include (""""confidenceLevel":500""")
+      jsonString should include (""""userDetailsLink":"/user-details/1234567890"""")
+      jsonString should include (""""enrolments":"/auth/oid/1234567890/enrolments"""")
+
+      val roundTrippedAuthority = Json.parse(jsonString).as[Authority]
+
+      roundTrippedAuthority shouldBe authority
+    }
+
+    "round trip correctly to and from JSON when links are not present" in {
+
+      val authority = Authority("/auth/some-oid",
+        Accounts(paye = Some(PayeAccount("/paye/AA000002B", Nino("AA000002B"))), iht = Some(IhtAccount("/iht/AA000002B", Nino("AA000002B")))),
+        None,
+        None,
+        CredentialStrength.Strong,
+        ConfidenceLevel.L500,
+        userDetailsLink = None,
+        enrolments = None
+      )
+
+      val jsonString = Json.toJson(authority).toString()
+
+      jsonString should include (""""paye":{"link":"/paye/AA000002B","nino":"AA000002B"}""")
+      jsonString should include (""""iht":{"link":"/iht/AA000002B","nino":"AA000002B"}""")
+      jsonString should include (""""credentialStrength":"strong"""")
+      jsonString should include (""""confidenceLevel":500""")
+      jsonString should not include (""""userDetailsLink"""")
+      jsonString should not include (""""enrolments"""")
 
       val roundTrippedAuthority = Json.parse(jsonString).as[Authority]
 
